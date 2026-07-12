@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BrowserCraft — почти как Minecraft</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- Главное меню -->
+  <div id="menu" class="overlay">
+    <div class="menu-panel">
+      <h1>⛏️ BrowserCraft</h1>
+      <p class="subtitle">Верстак · 3D-рука · скины · команды · хардкор · мобы</p>
+      <button id="btn-play" class="btn primary">▶ Одиночная игра</button>
+      <button id="btn-mp-play" class="btn primary mp">🌐 Мультиплеер</button>
+      <button id="btn-skin-menu" class="btn">👕 Скины / загрузка</button>
+      <button id="btn-howto" class="btn">ℹ Управление</button>
+      <button id="btn-host" class="btn">🖥 Сервер / туннель</button>
+      <p class="hint">T чат · C крафт · /nether /end · загрузка скина PNG · музыка в паузе</p>
+    </div>
+  </div>
+
+  <div id="mp-connect" class="overlay hidden">
+    <div class="menu-panel">
+      <h2>🌐 Мультиплеер</h2>
+      <label class="field-label">Ник</label>
+      <input id="mp-name" class="field" type="text" maxlength="16" value="Игрок" />
+      <label class="field-label">Адрес сервера</label>
+      <input id="mp-url" class="field" type="text" placeholder="пусто = этот сайт /ws" />
+      <div id="mp-status" class="mp-status">Не подключено</div>
+      <button id="btn-mp-join" class="btn primary">▶ Войти</button>
+      <button id="btn-mp-back" class="btn">← Назад</button>
+    </div>
+  </div>
+
+  <div id="host-info" class="overlay hidden">
+    <div class="menu-panel wide">
+      <h2>🖥 Сервер</h2>
+      <div class="mp-content">
+        <pre class="code-block">cd minecraft/server
+npm install
+npm start
+# туннель: npm run alive   или bore / localtunnel</pre>
+        <p>См. TUNNEL_ALTERNATIVES.md и PERMANENT_HOSTING.md</p>
+      </div>
+      <button id="btn-host-back" class="btn">← Назад</button>
+    </div>
+  </div>
+
+  <div id="howto" class="overlay hidden">
+    <div class="menu-panel wide">
+      <h2>Управление</h2>
+      <ul class="controls-list">
+        <li><kbd>WASD</kbd> ходьба</li>
+        <li><kbd>Мышь</kbd> взгляд</li>
+        <li><kbd>ЛКМ</kbd> ломать / бить</li>
+        <li><kbd>ПКМ</kbd> ставить / есть / юзать</li>
+        <li><kbd>E</kbd> инвентарь</li>
+        <li><kbd>C</kbd> верстак 2×2</li>
+        <li><kbd>T</kbd> чат / команды</li>
+        <li><kbd>F</kbd> креатив / выживание</li>
+        <li><kbd>/</kbd> команда быстро</li>
+        <li><kbd>Esc</kbd> пауза</li>
+      </ul>
+      <p class="hint">Команды: /help /gamemode /give /tp /summon /skin /hardcore /time /difficulty</p>
+      <p class="hint">ПКМ по верстаку — крафт 3×3. ПКМ по двери/рычагу/печи.</p>
+      <button id="btn-howto-back" class="btn">← Назад</button>
+    </div>
+  </div>
+
+  <!-- Skin picker -->
+  <div id="skin-ui" class="overlay hidden">
+    <div class="menu-panel wide">
+      <h2>👕 Скин игрока</h2>
+      <div id="skin-presets" class="skin-grid"></div>
+      <div class="skin-custom">
+        <label>Кожа <input type="color" id="skin-skin" value="#c68642" /></label>
+        <label>Волосы <input type="color" id="skin-hair" value="#3a2a1a" /></label>
+        <label>Рубашка <input type="color" id="skin-shirt" value="#3a7ab8" /></label>
+        <label>Штаны <input type="color" id="skin-pants" value="#2c3e50" /></label>
+      </div>
+      <label class="field-label">Загрузить свой скин (PNG/JPG, лучше 64×64 как в Minecraft)</label>
+      <input id="skin-file" class="field" type="file" accept="image/*" />
+      <div id="skin-preview-wrap" class="skin-preview-wrap hidden">
+        <canvas id="skin-preview" width="128" height="128"></canvas>
+        <span id="skin-file-name"></span>
+      </div>
+      <button id="btn-skin-apply" class="btn primary">✓ Надеть</button>
+      <button id="btn-skin-back" class="btn">← Назад</button>
+    </div>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div id="crosshair"></div>
+    <div id="debug">
+      <div id="fps">FPS: --</div>
+      <div id="pos">XYZ: --</div>
+      <div id="looking">Блок: --</div>
+      <div id="mode">Режим: —</div>
+      <div id="diff">Сложность: normal</div>
+      <div id="dim-label">Мир: overworld</div>
+      <div id="net">Сеть: оффлайн</div>
+      <div id="mobs-count">Мобы: 0</div>
+      <div id="mods-label">Моды: —</div>
+    </div>
+    <div id="hearts"></div>
+    <div id="xp-bar"><div id="xp-fill"></div></div>
+    <div id="hurt-overlay"></div>
+    <div id="chat-box">
+      <div id="chat-log"></div>
+      <input id="chat-input" class="hidden" type="text" maxlength="200" placeholder="/help или сообщение… Enter" autocomplete="off" />
+    </div>
+    <div id="hotbar">
+      <div class="slot selected" data-slot="0"><canvas width="40" height="40"></canvas><span class="count"></span></div>
+      <div class="slot" data-slot="1"><canvas width="40" height="40"></canvas><span class="count"></span></div>
+      <div class="slot" data-slot="2"><canvas width="40" height="40"></canvas><span class="count"></span></div>
+      <div class="slot" data-slot="3"><canvas width="40" height="40"></canvas><span class="count"></span></div>
+      <div class="slot" data-slot="4"><canvas width="40" height="40"></canvas><span class="count"></span></div>
+      <div class="slot" data-slot="5"><canvas width="40" height="40"></canvas><span class="count"></span></div>
+      <div class="slot" data-slot="6"><canvas width="40" height="40"></canvas><span class="count"></span></div>
+      <div class="slot" data-slot="7"><canvas width="40" height="40"></canvas><span class="count"></span></div>
+      <div class="slot" data-slot="8"><canvas width="40" height="40"></canvas><span class="count"></span></div>
+    </div>
+    <div id="break-progress"><div id="break-bar"></div></div>
+  </div>
+
+  <!-- Inventory + pocket craft -->
+  <div id="inventory" class="hidden">
+    <div class="inv-panel inv-wide">
+      <h3>Инвентарь · клик = в хотбар</h3>
+      <div id="inv-grid"></div>
+      <p class="hint">E закрыть · C верстак · /give item</p>
+    </div>
+  </div>
+
+  <!-- Crafting table UI -->
+  <div id="craft-ui" class="hidden">
+    <div class="inv-panel craft-panel">
+      <h3 id="craft-title">🔨 Верстак 3×3</h3>
+      <div class="craft-row">
+        <div id="craft-grid" class="craft-grid size3"></div>
+        <div class="craft-arrow">→</div>
+        <div id="craft-result" class="craft-result"><canvas width="48" height="48"></canvas><span class="count"></span></div>
+      </div>
+      <div id="craft-bag" class="craft-bag"></div>
+      <p class="hint">Клик по предмету сумки → слот · клик по слоту — очистить · результат — забрать</p>
+      <button id="btn-craft-close" class="btn">Закрыть</button>
+    </div>
+  </div>
+
+  <div id="pause" class="overlay hidden">
+    <div class="menu-panel">
+      <h2>⏸ Пауза</h2>
+      <button id="btn-resume" class="btn primary">▶ Продолжить</button>
+      <label class="field-label">🔊 Звуки (SFX)</label>
+      <input id="vol-slider" type="range" min="0" max="100" value="45" class="vol-range" />
+      <label class="check-row"><input type="checkbox" id="chk-sound" checked /> SFX вкл.</label>
+      <label class="field-label">🎵 Музыка (тише)</label>
+      <input id="music-slider" type="range" min="0" max="100" value="12" class="vol-range" />
+      <label class="check-row"><input type="checkbox" id="chk-music" checked /> Фоновая музыка</label>
+      <label class="field-label">Свой трек (mp3/ogg) — если есть права на файл</label>
+      <input id="music-file" class="field" type="file" accept="audio/*" />
+      <p class="hint">Оригинал «Step On Up» (The Living Tombstone) в игру встроить нельзя (авторские права). Есть свой электронный BGM или загрузи свой файл.</p>
+      <label class="field-label">Сложность</label>
+      <select id="diff-select" class="field">
+        <option value="peaceful">peaceful</option>
+        <option value="easy">easy</option>
+        <option value="normal" selected>normal</option>
+        <option value="hard">hard</option>
+        <option value="hardcore">hardcore</option>
+      </select>
+      <button id="btn-skin-pause" class="btn">👕 Скин</button>
+      <button id="btn-regen" class="btn">🌍 Новый мир</button>
+      <button id="btn-menu" class="btn">☰ В меню</button>
+    </div>
+  </div>
+
+  <div id="death" class="overlay hidden">
+    <div class="menu-panel death-panel">
+      <h2 id="death-title">💀 Ты погиб</h2>
+      <p id="death-msg" class="hint">Падение, мобы, TNT…</p>
+      <button id="btn-respawn" class="btn primary">♥ Возродиться</button>
+      <button id="btn-death-menu" class="btn">☰ В меню</button>
+    </div>
+  </div>
+
+  <canvas id="game"></canvas>
+
+  <script src="js/config.js"></script>
+  <script src="js/three.min.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/music.js"></script>
+  <script src="js/textures.js"></script>
+  <script src="js/craft.js"></script>
+  <script src="js/skins.js"></script>
+  <script src="js/mods.js"></script>
+  <script src="js/commands.js"></script>
+  <script src="js/hand.js"></script>
+  <script src="js/particles.js"></script>
+  <script src="js/dimensions.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/mobs.js"></script>
+  <script src="js/multiplayer.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
