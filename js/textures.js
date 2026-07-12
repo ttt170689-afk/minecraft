@@ -47,6 +47,18 @@ const BLOCKS = {
   end_portal: { id: 36, name: 'Портал Края', solid: false, transparent: true, hardness: Infinity },
   purpur: { id: 37, name: 'Пурпур', solid: true, transparent: false, hardness: 1.5 },
   magma: { id: 38, name: 'Магма', solid: true, transparent: false, hardness: 0.5, light: true },
+  chest: { id: 39, name: 'Сундук', solid: true, transparent: false, hardness: 2.5, interact: true },
+  bookshelf: { id: 40, name: 'Книжная полка', solid: true, transparent: false, hardness: 1.5 },
+  wool: { id: 41, name: 'Шерсть', solid: true, transparent: false, hardness: 0.8 },
+  concrete: { id: 42, name: 'Бетон', solid: true, transparent: false, hardness: 1.8 },
+  terracotta: { id: 43, name: 'Терракота', solid: true, transparent: false, hardness: 1.25 },
+  ice: { id: 44, name: 'Лёд', solid: true, transparent: true, hardness: 0.5 },
+  packed_ice: { id: 45, name: 'Плотный лёд', solid: true, transparent: false, hardness: 0.5 },
+  mycelium: { id: 46, name: 'Мицелий', solid: true, transparent: false, hardness: 0.6 },
+  podzol: { id: 47, name: 'Подзол', solid: true, transparent: false, hardness: 0.5 },
+  hay: { id: 48, name: 'Сноп сена', solid: true, transparent: false, hardness: 0.5 },
+  melon: { id: 49, name: 'Арбуз', solid: true, transparent: false, hardness: 1.0 },
+  pumpkin: { id: 50, name: 'Тыква', solid: true, transparent: false, hardness: 1.0 },
   // Items as "blocks" for hotbar icons
 };
 
@@ -81,6 +93,9 @@ const ITEMS = {
   arrow:         { name: 'Стрела', type: 'misc', icon: 'arrow' },
   shield:        { name: 'Щит', type: 'misc', icon: 'shield' },
   trident:       { name: 'Трезубец', type: 'weapon', damage: 9, cooldown: 0.5, icon: 'trident' },
+  mace:          { name: 'Булава', type: 'weapon', damage: 11, cooldown: 0.85, icon: 'mace' },
+  mace_diamond:  { name: 'Алмазная булава', type: 'weapon', damage: 14, cooldown: 0.8, icon: 'mace_diamond' },
+  mace_nether:   { name: 'Незеритовая булава', type: 'weapon', damage: 16, cooldown: 0.75, icon: 'mace_nether' },
   torch_item:    { name: 'Факел', type: 'misc', icon: 'torch_item' },
   sugar_cane:    { name: 'Тростник', type: 'misc', icon: 'stick' },
   ladder:        { name: 'Лестница', type: 'misc', icon: 'ladder' },
@@ -524,6 +539,89 @@ function drawMagma(data) {
   for (let i = 0; i < 30; i++) setPx(data, (rng()*16)|0, (rng()*16)|0, 255, 100 + (rng()*80)|0, 20);
 }
 
+function drawChest(data) {
+  fillNoise(data, 140, 95, 40, 10, 1300);
+  for (let x = 0; x < 16; x++) {
+    setPx(data, x, 7, 90, 60, 25);
+    setPx(data, x, 8, 90, 60, 25);
+  }
+  for (let y = 0; y < 16; y++) {
+    setPx(data, 0, y, 100, 70, 30);
+    setPx(data, 15, y, 100, 70, 30);
+  }
+  // lock
+  setPx(data, 7, 8, 200, 180, 50);
+  setPx(data, 8, 8, 200, 180, 50);
+  setPx(data, 7, 9, 180, 160, 40);
+  setPx(data, 8, 9, 180, 160, 40);
+}
+
+function drawBookshelf(data) {
+  drawPlanks(data);
+  for (let y = 2; y < 14; y++) {
+    for (let x = 1; x < 15; x++) {
+      if ((y % 4) !== 0) {
+        const c = ((x + y) % 5) * 20;
+        setPx(data, x, y, 120 + c, 40, 40);
+      }
+    }
+  }
+}
+
+function drawWool(data) {
+  fillNoise(data, 230, 230, 230, 12, 1310);
+}
+
+function drawConcrete(data) {
+  fillNoise(data, 180, 180, 185, 6, 1320);
+}
+
+function drawTerracotta(data) {
+  fillNoise(data, 170, 100, 70, 10, 1330);
+}
+
+function drawIce(data) {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const w = Math.sin(x * 0.6 + y * 0.4) * 20;
+    setPx(data, x, y, clamp(160 + w), clamp(200 + w), clamp(230 + w), 180);
+  }
+}
+
+function drawPackedIce(data) {
+  fillNoise(data, 140, 180, 220, 10, 1340);
+}
+
+function drawMycelium(data) {
+  fillNoise(data, 110, 90, 120, 15, 1350);
+  const rng = mulberry32(1351);
+  for (let i = 0; i < 20; i++) setPx(data, (rng()*16)|0, (rng()*16)|0, 200, 180, 210);
+}
+
+function drawPodzol(data) {
+  fillNoise(data, 90, 70, 40, 12, 1360);
+}
+
+function drawHay(data) {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const n = ((x + y * 3) % 4) * 8;
+    setPx(data, x, y, clamp(200 + n), clamp(170 + n), 40);
+    if (y % 4 === 0) setPx(data, x, y, 160, 130, 30);
+  }
+}
+
+function drawMelon(data) {
+  fillNoise(data, 80, 160, 50, 15, 1370);
+  for (let i = 0; i < 16; i++) setPx(data, i, i, 50, 120, 40);
+}
+
+function drawPumpkin(data) {
+  fillNoise(data, 220, 130, 30, 12, 1380);
+  // face
+  setPx(data, 5, 6, 30, 20, 10);
+  setPx(data, 10, 6, 30, 20, 10);
+  for (let x = 5; x <= 10; x++) setPx(data, x, 10, 30, 20, 10);
+}
+
 function makeImageData(drawFn) {
   const canvas = document.createElement('canvas');
   canvas.width = TEXTURE_SIZE;
@@ -592,6 +690,11 @@ function drawItemIcon(key) {
   } else if (key === 'trident') {
     for (let i = 0; i < 12; i++) px(9, 4 + i, '#5ce1e6');
     px(7, 3, '#5ce1e6'); px(9, 2, '#5ce1e6'); px(11, 3, '#5ce1e6');
+  } else if (key === 'mace' || key === 'mace_diamond' || key === 'mace_nether') {
+    const col = key.includes('nether') ? '#4a2a4a' : key.includes('diamond') ? '#5ce1e6' : '#888';
+    for (let i = 0; i < 8; i++) px(8, 8 + i, '#6b4226');
+    for (let y = 2; y < 9; y++) for (let x = 5; x < 12; x++) px(x, y, col);
+    px(6, 3, '#aaa'); px(10, 3, '#aaa');
   } else if (key === 'shield') {
     for (let y = 3; y < 15; y++) for (let x = 5; x < 13; x++) px(x, y, '#8b5a2b');
     for (let y = 5; y < 13; y++) for (let x = 6; x < 12; x++) px(x, y, '#c0c0c0');
@@ -761,6 +864,18 @@ class TextureAtlas {
       end_portal: { all: (d) => drawPortal(d, 20, 0, 40) },
       purpur: { all: drawPurpur },
       magma: { all: drawMagma },
+      chest: { all: drawChest },
+      bookshelf: { all: drawBookshelf },
+      wool: { all: drawWool },
+      concrete: { all: drawConcrete },
+      terracotta: { all: drawTerracotta },
+      ice: { all: drawIce },
+      packed_ice: { all: drawPackedIce },
+      mycelium: { top: drawMycelium, bottom: drawDirt, side: drawMycelium },
+      podzol: { top: drawPodzol, bottom: drawDirt, side: drawPodzol },
+      hay: { all: drawHay },
+      melon: { all: drawMelon },
+      pumpkin: { all: drawPumpkin },
     };
 
     for (const [key, faces] of Object.entries(gens)) {
@@ -867,6 +982,8 @@ const PLACEABLE = [
   'crafting_table', 'furnace',
   'obsidian', 'netherrack', 'soul_sand', 'glowstone', 'end_stone',
   'nether_portal', 'end_portal', 'purpur', 'magma',
+  'chest', 'bookshelf', 'wool', 'concrete', 'terracotta',
+  'ice', 'packed_ice', 'mycelium', 'podzol', 'hay', 'melon', 'pumpkin',
 ];
 
 const INVENTORY_ALL = [
@@ -874,6 +991,7 @@ const INVENTORY_ALL = [
   'torch_item', 'ladder', 'stick',
   // weapons & tools
   'sword_wood', 'sword_stone', 'sword_iron', 'sword_gold', 'sword_diamond', 'sword_nether',
+  'mace', 'mace_diamond', 'mace_nether',
   'axe_wood', 'axe_iron', 'axe_diamond',
   'pick_wood', 'pick_stone', 'pick_iron', 'pick_gold', 'pick_diamond', 'pick_nether',
   'shovel_iron', 'hoe_iron', 'shears',

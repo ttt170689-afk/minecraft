@@ -131,4 +131,29 @@ ModAPI.register({
   },
 });
 
+/**
+ * Load a user .js mod file (text). Expected to call ModAPI.register({...})
+ * Usage from UI: input type=file accept=.js
+ */
+ModAPI.loadUserFile = function (file) {
+  return new Promise((resolve, reject) => {
+    if (!file) return reject(new Error('Нет файла'));
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        // sandboxed-ish: run in function with only ModAPI
+        const code = String(reader.result);
+        // eslint-disable-next-line no-new-func
+        const fn = new Function('ModAPI', 'ITEMS', 'BLOCKS', 'RECIPES', code);
+        fn(ModAPI, typeof ITEMS !== 'undefined' ? ITEMS : {}, typeof BLOCKS !== 'undefined' ? BLOCKS : {}, typeof RECIPES !== 'undefined' ? RECIPES : []);
+        resolve(true);
+      } catch (e) {
+        reject(e);
+      }
+    };
+    reader.onerror = () => reject(new Error('read error'));
+    reader.readAsText(file);
+  });
+};
+
 window.ModAPI = ModAPI;

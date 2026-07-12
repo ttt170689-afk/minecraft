@@ -24,10 +24,13 @@ class Player {
     this.sneaking = false;
     this.locked = false;
 
-    this.walkSpeed = 4.3;
-    this.flySpeed = 10;
-    this.jumpSpeed = 8.2;
-    this.gravity = 28;
+    this.walkSpeed = 4.317;
+    this.flySpeed = 10.89;
+    this.jumpSpeed = 8.42;
+    this.gravity = 32;
+    this.groundFriction = 0.82;
+    this.airControl = 0.35;
+    this.terminalVel = 78.4;
 
     this.keys = {};
     this.mouseLeft = false;
@@ -96,10 +99,7 @@ class Player {
   _bindEvents() {
     document.addEventListener('keydown', (e) => {
       this.keys[e.code] = true;
-      if (e.code === 'KeyF' && this.locked) {
-        this.flying = !this.flying;
-        if (window.SFX) SFX.pop();
-      }
+      // F3/F4 handled in game.js; plain F toggles flight there too
       if (e.code.startsWith('Digit')) {
         const n = parseInt(e.code.replace('Digit', ''), 10);
         if (n >= 1 && n <= 9) {
@@ -156,19 +156,34 @@ class Player {
     }
   }
 
-  spawn() {
+  spawn(sx, sy, sz) {
     this.dead = false;
     this.health = this.maxHealth;
     this.vel.set(0, 0, 0);
-    this.hurtCooldown = 0;
+    this.hurtCooldown = 1.5; // spawn protection — no phantom damage
+    this.fallStartY = null;
     if (this.onHealthChange) this.onHealthChange(this.health, this.maxHealth);
+
+    // Explicit multiplayer / shared spawn
+    if (sx != null && sy != null && sz != null) {
+      this.pos.set(sx, sy, sz);
+      return;
+    }
+
+    // Prefer forest / plains surface, not ocean / pure ice island
+    if (this.world && typeof this.world.findSpawnPos === 'function') {
+      const p = this.world.findSpawnPos();
+      this.pos.set(p.x, p.y, p.z);
+      return;
+    }
+
     for (let y = WORLD_HEIGHT - 1; y > 0; y--) {
       if (this.world.isSolid(0, y, 0)) {
         this.pos.set(0.5, y + 1.1, 0.5);
         return;
       }
     }
-    this.pos.set(0.5, SEA_LEVEL + 5, 0.5);
+    this.pos.set(0.5, SEA_LEVEL + 2, 0.5);
   }
 
   heal(amount) {
@@ -180,14 +195,19 @@ class Player {
   }
 
   hurt(amount, knockDir) {
+    amount = Number(amount);
+    if (!Number.isFinite(amount) || amount <= 0) return false;
     if (this.dead || this.flying || this.hurtCooldown > 0) return false;
-    this.health = Math.max(0, this.health - amount);
-    this.hurtCooldown = 0.6;
+    // Ignore tiny float burn spam / phantom ticks
+    if (amount < 0.25 && !knockDir) return false;
+    this.health = Math.max(0, this.health - Math.ceil(amount));
+    this.hurtCooldown = 0.55;
     if (window.SFX) SFX.hurt();
-    if (knockDir) {
-      this.vel.x += knockDir.x * 6;
-      this.vel.z += knockDir.z * 6;
-      this.vel.y = 4;
+    if (knockDir && Number.isFinite(knockDir.x) && Number.isFinite(knockDir.z)) {
+      const len = Math.hypot(knockDir.x, knockDir.z) || 1;
+      this.vel.x += (knockDir.x / len) * 5.5;
+      this.vel.z += (knockDir.z / len) * 5.5;
+      this.vel.y = Math.max(this.vel.y, 3.5);
     }
     if (this.onHealthChange) this.onHealthChange(this.health, this.maxHealth);
     if (this.health <= 0) this._die();
@@ -259,14 +279,22 @@ class Player {
       }
       let speed = this.walkSpeed * (this.sneaking ? 0.3 : 1);
       if (this.effects && this.effects.speed) speed *= 1.45;
-      // apply horizontal wish, preserve some knockback
-      if (Math.abs(this.vel.x) < speed + 0.1) this.vel.x = wish.x * speed;
-      else this.vel.x *= 0.9;
-      if (Math.abs(this.vel.z) < speed + 0.1) this.vel.z = wish.z * speed;
-      else this.vel.z *= 0.9;
-      if (wish.lengthSq() > 0 && Math.hypot(this.vel.x, this.vel.z) > speed) {
-        this.vel.x = wish.x * speed;
-        this.vel.z = wish.z * speed;
+      // sprint
+      if ((this.keys['ControlLeft'] || this.keys['ControlRight']) && wish.lengthSq() > 0 && !this.sneaking) {
+        speed *= 1.3;
+      }
+
+      // Minecraft-ish acceleration / friction
+      const control = this.onGround ? 1 : this.airControl;
+      const targetX = wish.x * speed;
+      const targetZ = wish.z * speed;
+      this.vel.x += (targetX - this.vel.x) * Math.min(1, control * 12 * dt);
+      this.vel.z += (targetZ - this.vel.z) * Math.min(1, control * 12 * dt);
+      if (this.onGround && wish.lengthSq() === 0) {
+        this.vel.x *= this.groundFriction;
+        this.vel.z *= this.groundFriction;
+        if (Math.abs(this.vel.x) < 0.01) this.vel.x = 0;
+        if (Math.abs(this.vel.z) < 0.01) this.vel.z = 0;
       }
 
       if (this.onGround && this.keys['Space']) {
@@ -281,7 +309,7 @@ class Player {
       }
 
       this.vel.y -= this.gravity * dt;
-      if (this.vel.y < -40) this.vel.y = -40;
+      if (this.vel.y < -this.terminalVel) this.vel.y = -this.terminalVel;
 
       this.pos.x += this.vel.x * dt;
       this._collideAxis('x');
@@ -290,10 +318,10 @@ class Player {
       this.pos.y += this.vel.y * dt;
       this._collideAxis('y');
 
-      // land fall damage
+      // land fall damage (only real falls)
       if (this.onGround && this.fallStartY != null) {
         const fall = this.fallStartY - this.pos.y;
-        if (fall > 3.5) {
+        if (fall > 3.5 && this.hurtCooldown <= 0) {
           const dmg = Math.floor(fall - 3);
           if (dmg > 0) this.hurt(dmg);
         }
@@ -572,6 +600,12 @@ class Player {
       if (this.onOpenFurnace) this.onOpenFurnace();
       else if (this.onOpenCraft) this.onOpenCraft(true);
       if (window.SFX) SFX.lever && SFX.lever();
+      return true;
+    }
+    if (k === 'chest') {
+      if (this.onOpenChest) this.onOpenChest(hit.x, hit.y, hit.z);
+      else if (this.onOpenCraft) this.onOpenCraft(false);
+      if (window.SFX) SFX.menuOpen && SFX.menuOpen();
       return true;
     }
     if (k === 'door' || k === 'doorOpen') {

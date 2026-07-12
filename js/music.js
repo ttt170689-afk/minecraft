@@ -80,10 +80,14 @@ class MusicEngine {
     }
     this.mode = 'procedural';
     try { localStorage.setItem('bc_music_mode', 'procedural'); } catch {}
-    if (this.enabled) this.start();
+    // explicit only
+    this.playing = true;
+    this._step = 0;
+    this._schedule();
   }
 
   start() {
+    // Only user-uploaded tracks by default (no built-in procedural spam)
     if (!this.enabled) return;
     this.resume();
     if (this.mode === 'custom' && this.customAudio) {
@@ -91,10 +95,9 @@ class MusicEngine {
       this.playing = true;
       return;
     }
-    if (this.playing && this._timer) return;
-    this.playing = true;
-    this._step = 0;
-    this._schedule();
+    // procedural disabled unless explicitly requested via useProcedural()
+    this.playing = false;
+    this.stopProcedural();
   }
 
   stop() {

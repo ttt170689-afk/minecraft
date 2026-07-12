@@ -143,11 +143,14 @@ wss.on('connection', (ws, req) => {
 
   const id = uid();
   const color = COLORS[players.size % COLORS.length];
+  // Shared spawn for ALL players (same world entry point)
+  // Client will refine to forest surface using same seed; server keeps common XYZ hub.
+  const spawnX = 0.5, spawnY = 48, spawnZ = 0.5;
   const player = {
     id,
     name: 'Игрок_' + id.slice(0, 4),
     color,
-    x: 0.5, y: 40, z: 0.5,
+    x: spawnX, y: spawnY, z: spawnZ,
     yaw: 0, pitch: 0,
     lastMove: 0,
     ws,
@@ -163,6 +166,7 @@ wss.on('connection', (ws, req) => {
     seed,
     name: player.name,
     color,
+    spawn: { x: spawnX, y: spawnY, z: spawnZ },
     players: publicPlayers(id),
     blocks: blocksObject(),
   });
@@ -215,7 +219,7 @@ wss.on('connection', (ws, req) => {
         const z = Math.floor(Number(msg.z));
         const blockId = Math.floor(Number(msg.id));
         if (![x, y, z, blockId].every(Number.isFinite)) return;
-        if (y < 0 || y >= 64) return;
+        if (y < 0 || y >= 96) return;
         if (blockId < 0 || blockId > 255) return;
         // bedrock protection at y=0
         if (y === 0 && blockId === 0) return;

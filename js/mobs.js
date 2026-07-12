@@ -208,43 +208,49 @@ function buildMobMesh(type) {
     g.userData.parts.wingL = wingL;
     g.userData.parts.wingR = wingR;
   } else {
-    // Humanoid: zombie / skeleton (+ default)
+    // Humanoid: zombie / skeleton — more detailed layers
     const skin = def.color;
     const headC = def.head;
+    // boots
+    g.add(box(0.3, 0.18, 0.32, 0x1a1a1a, -0.16, 0.09, 0.02));
+    g.add(box(0.3, 0.18, 0.32, 0x1a1a1a, 0.16, 0.09, 0.02));
     // legs
-    const legL = box(0.28, 0.7, 0.28, type === 'skeleton' ? 0xd0d0c0 : 0x2a3a5a, -0.16, 0.35, 0);
-    const legR = box(0.28, 0.7, 0.28, type === 'skeleton' ? 0xd0d0c0 : 0x2a3a5a, 0.16, 0.35, 0);
+    const legL = box(0.26, 0.62, 0.26, type === 'skeleton' ? 0xd8d8c8 : 0x2a3a5a, -0.16, 0.42, 0);
+    const legR = box(0.26, 0.62, 0.26, type === 'skeleton' ? 0xd8d8c8 : 0x2a3a5a, 0.16, 0.42, 0);
     g.add(legL, legR);
-    // body / shirt
+    // hips / belt
+    g.add(box(0.58, 0.14, 0.32, 0x222, 0, 0.78, 0));
+    // body / shirt with outer layer
     const bodyCol = type === 'zombie' ? 0x3a5a7a : skin;
-    g.add(box(0.55, 0.7, 0.3, bodyCol, 0, 1.05, 0));
-    // arms
-    const armL = box(0.24, 0.7, 0.24, skin, -0.42, 1.05, 0);
-    const armR = box(0.24, 0.7, 0.24, skin, 0.42, 1.05, 0);
-    // zombie arms forward
+    g.add(box(0.56, 0.72, 0.32, bodyCol, 0, 1.1, 0));
+    g.add(box(0.6, 0.2, 0.34, bodyCol, 0, 1.35, 0)); // shoulders
+    // arms with sleeves
+    const armL = box(0.22, 0.68, 0.22, skin, -0.44, 1.08, 0);
+    const armR = box(0.22, 0.68, 0.22, skin, 0.44, 1.08, 0);
+    g.add(box(0.26, 0.28, 0.26, bodyCol, -0.44, 1.32, 0));
+    g.add(box(0.26, 0.28, 0.26, bodyCol, 0.44, 1.32, 0));
     if (type === 'zombie') {
-      armL.rotation.x = -1.2;
-      armR.rotation.x = -1.2;
+      armL.rotation.x = -1.15;
+      armR.rotation.x = -1.15;
     }
     g.add(armL, armR);
-    // head
-    const head = box(0.5, 0.5, 0.5, headC, 0, 1.65, 0);
+    // head + second layer (hat/hair)
+    const head = box(0.52, 0.52, 0.52, headC, 0, 1.68, 0);
     g.add(head);
-    // face details
+    g.add(box(0.56, 0.16, 0.56, type === 'zombie' ? 0x2a4a2a : 0xc8c8b8, 0, 1.92, 0));
+    // ears / jaw detail
     if (type === 'zombie') {
-      g.add(box(0.1, 0.08, 0.05, 0x222, -0.12, 1.7, 0.26));
-      g.add(box(0.1, 0.08, 0.05, 0x222, 0.12, 1.7, 0.26));
-      g.add(box(0.2, 0.08, 0.05, 0x4a2020, 0, 1.52, 0.26));
+      g.add(box(0.12, 0.1, 0.06, 0x111, -0.14, 1.74, 0.28));
+      g.add(box(0.12, 0.1, 0.06, 0x111, 0.14, 1.74, 0.28));
+      g.add(box(0.22, 0.08, 0.06, 0x4a2020, 0, 1.54, 0.28));
+      g.add(box(0.08, 0.14, 0.06, 0x3d7a3d, -0.28, 1.68, 0)); // ear
+      g.add(box(0.08, 0.14, 0.06, 0x3d7a3d, 0.28, 1.68, 0));
     } else if (type === 'skeleton') {
-      g.add(box(0.1, 0.12, 0.05, 0x111, -0.12, 1.7, 0.26));
-      g.add(box(0.1, 0.12, 0.05, 0x111, 0.12, 1.7, 0.26));
-      g.add(box(0.18, 0.06, 0.05, 0x111, 0, 1.52, 0.26));
-      // bow in hand
-      g.add(box(0.08, 0.45, 0.08, 0x8b5a2b, 0.5, 1.1, 0.15));
-    }
-    // hair / helmet detail for zombie
-    if (type === 'zombie') {
-      g.add(box(0.52, 0.12, 0.52, 0x2a4a2a, 0, 1.88, 0));
+      g.add(box(0.12, 0.14, 0.06, 0x111, -0.14, 1.74, 0.28));
+      g.add(box(0.12, 0.14, 0.06, 0x111, 0.14, 1.74, 0.28));
+      g.add(box(0.2, 0.08, 0.06, 0x111, 0, 1.54, 0.28));
+      g.add(box(0.1, 0.5, 0.1, 0x8b5a2b, 0.52, 1.15, 0.12)); // bow
+      g.add(box(0.06, 0.06, 0.28, 0xddd, 0.52, 1.35, 0.2));
     }
     g.userData.parts = { head, armL, armR, legL, legR };
   }

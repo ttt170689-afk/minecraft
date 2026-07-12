@@ -242,51 +242,50 @@ class Multiplayer {
     const group = new THREE.Group();
     const skin = 0xffe0bd;
     const pants = 0x2c3e50;
+    const boots = 0x1a1a1a;
 
-    // legs
-    const legL = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.7, 0.28), new THREE.MeshLambertMaterial({ color: pants }));
-    legL.position.set(-0.16, 0.35, 0);
+    // boots + legs
+    group.add(new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.16, 0.32), new THREE.MeshLambertMaterial({ color: boots })).translateX(-0.16).translateY(0.08));
+    group.add(new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.16, 0.32), new THREE.MeshLambertMaterial({ color: boots })).translateX(0.16).translateY(0.08));
+    const legL = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.62, 0.26), new THREE.MeshLambertMaterial({ color: pants }));
+    legL.position.set(-0.16, 0.42, 0);
     const legR = legL.clone();
     legR.position.x = 0.16;
     group.add(legL, legR);
-
-    // body / shirt
-    const body = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.7, 0.3), new THREE.MeshLambertMaterial({ color }));
-    body.position.y = 1.05;
+    // belt + body
+    group.add(new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.12, 0.32), new THREE.MeshLambertMaterial({ color: 0x222 })).translateY(0.78));
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.72, 0.32), new THREE.MeshLambertMaterial({ color }));
+    body.position.y = 1.12;
     group.add(body);
-
+    group.add(new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.18, 0.34), new THREE.MeshLambertMaterial({ color })).translateY(1.4));
     // arms
-    const armL = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.7, 0.24), new THREE.MeshLambertMaterial({ color: skin }));
-    armL.position.set(-0.42, 1.05, 0);
+    const armL = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.68, 0.22), new THREE.MeshLambertMaterial({ color: skin }));
+    armL.position.set(-0.44, 1.1, 0);
     const armR = armL.clone();
-    armR.position.x = 0.42;
+    armR.position.x = 0.44;
     group.add(armL, armR);
-
-    // head + hair
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshLambertMaterial({ color: skin }));
-    head.position.y = 1.65;
+    // head + hair + eyes + nose
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.52, 0.52), new THREE.MeshLambertMaterial({ color: skin }));
+    head.position.y = 1.7;
     group.add(head);
-    const hair = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.14, 0.54), new THREE.MeshLambertMaterial({ color: 0x3a2a1a }));
-    hair.position.y = 1.88;
-    group.add(hair);
-    // eyes
+    group.add(new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.16, 0.56), new THREE.MeshLambertMaterial({ color: 0x3a2a1a })).translateY(1.94));
     const eyeM = new THREE.MeshLambertMaterial({ color: 0x222222 });
     const e1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.08, 0.05), eyeM);
-    e1.position.set(-0.12, 1.7, 0.26);
+    e1.position.set(-0.12, 1.74, 0.28);
     const e2 = e1.clone(); e2.position.x = 0.12;
     group.add(e1, e2);
+    group.add(new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.08, 0.08), new THREE.MeshLambertMaterial({ color: 0xe0ac69 })).translateY(1.62).translateZ(0.28));
 
-    // shadow
     const shadow = new THREE.Mesh(
-      new THREE.CircleGeometry(0.35, 12),
-      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3, depthWrite: false })
+      new THREE.CircleGeometry(0.38, 14),
+      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.32, depthWrite: false })
     );
     shadow.rotation.x = -Math.PI / 2;
     shadow.position.y = 0.02;
     group.add(shadow);
 
     const label = this._makeLabel(data.name || 'Игрок', color);
-    label.position.y = 2.15;
+    label.position.y = 2.2;
     group.add(label);
 
     if (this.scene) this.scene.add(group);

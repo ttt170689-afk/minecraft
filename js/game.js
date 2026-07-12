@@ -91,6 +91,10 @@
   let difficulty = 'normal';
   let timePhase = 0; // 0 day .. 1 night
   let timeSpeed = 0.008;
+  const dayCycle = (typeof GlobalDayCycle !== 'undefined') ? GlobalDayCycle : null;
+  if (dayCycle) dayCycle.dayLengthSec = 480; // 8 min full day
+  let weather = (typeof WeatherSystem !== 'undefined') ? new WeatherSystem() : null;
+  let gameStats = (typeof GameStats !== 'undefined') ? new GameStats() : null;
   let craftTableMode = false;
   let craftSlots = [];
   let craftCursor = null;
@@ -161,12 +165,16 @@
     });
   }
   if (chkMusic) {
+    // default OFF — no built-in BGM
     try {
       const m = localStorage.getItem('bc_music');
-      if (m != null) chkMusic.checked = m !== '0';
-    } catch {}
+      chkMusic.checked = m === '1';
+    } catch { chkMusic.checked = false; }
     chkMusic.addEventListener('change', () => {
-      if (window.Music) Music.setEnabled(chkMusic.checked);
+      if (window.Music) {
+        if (chkMusic.checked && Music.mode === 'custom') Music.setEnabled(true);
+        else { Music.setEnabled(false); Music.stop(); }
+      }
       try { localStorage.setItem('bc_music', chkMusic.checked ? '1' : '0'); } catch {}
     });
   }
@@ -175,7 +183,9 @@
       const f = musicFile.files && musicFile.files[0];
       if (f && window.Music) {
         Music.loadFile(f);
-        say('Загружен трек: ' + f.name + ' (тише в слайдере музыки)', '#8fd9ff');
+        if (chkMusic) chkMusic.checked = true;
+        Music.setEnabled(true);
+        say('Трек: ' + f.name + ' · громкость слайдером', '#8fd9ff');
       }
     });
   }
@@ -207,12 +217,31 @@
   }
   diffSelect.addEventListener('change', () => setDifficulty(diffSelect.value));
 
+  const modFile = document.getElementById('mod-file');
+  if (modFile) {
+    modFile.addEventListener('change', async () => {
+      const f = modFile.files && modFile.files[0];
+      if (!f || !window.ModAPI || !ModAPI.loadUserFile) return;
+      try {
+        await ModAPI.loadUserFile(f);
+        say('Мод загружен: ' + f.name + ' · /mods', '#8f8');
+        if (modsLabel && ModAPI.mods) modsLabel.textContent = 'Моды: ' + ModAPI.mods.length;
+        if (window.SFX) SFX.levelUp && SFX.levelUp();
+        buildInventoryUI();
+      } catch (err) {
+        say('Ошибка мода: ' + err.message, '#f88');
+      }
+    });
+  }
+
   function unlockAudio() {
     if (window.SFX) { SFX.resume(); SFX.setVolume(+volSlider.value / 100); SFX.enabled = chkSound.checked; }
     if (window.Music) {
       Music.resume();
       Music.setVolume(+(musicSlider && musicSlider.value || 12) / 100);
-      if (chkMusic && chkMusic.checked) Music.start();
+      // only play if user uploaded a track (no auto procedural BGM)
+      if (chkMusic && chkMusic.checked && Music.mode === 'custom') Music.start();
+      else Music.stopProcedural();
     }
   }
   document.addEventListener('click', unlockAudio);
@@ -244,6 +273,7 @@
 
   function setTimePhase(t) {
     timePhase = Math.max(0, Math.min(1, t));
+    if (dayCycle) dayCycle.set(timePhase);
     applyTimeVisuals();
   }
 
@@ -402,7 +432,11 @@
       }
     };
     p.onOpenCraft = (table) => openCraft(!!table);
-    p.onOpenFurnace = () => { say('Печь: еда+уголь в крафте (beef+coal → стейк)', '#fa8'); openCraft(true); };
+    p.onOpenFurnace = () => { say('Печь: еда+уголь в крафте (beef+coal → стейк) или /give steak', '#fa8'); openCraft(true); };
+    p.onOpenChest = (x, y, z) => {
+      say(`Сундук (${x}, ${y}, ${z}): хранилище · E инвентарь · пока общий bag`, '#fda');
+      openInventory();
+    };
     p.onEat = () => { if (handView) handView.playEat(); if (particles) particles.spawn(p.pos.x, p.pos.y + 1.4, p.pos.z, { count: 6, color: 0xffaaaa, life: 0.4, speed: 1, gravity: 2, size: 0.05 }); };
     p.onPearl = (x, y, z) => { if (particles) particles.magic(x + 0.5, y + 1, z + 0.5); };
     p.onLightPortal = (x, y, z) => {
@@ -703,7 +737,7 @@
     renderHearts(player.health, player.maxHealth);
     netEl.textContent = 'Сеть: оффлайн';
     say('Добро пожаловать! /help · /nether · /end · C крафт · загрузи скин PNG', '#8fd9ff');
-    if (window.Music && chkMusic && chkMusic.checked) Music.start();
+    // no auto music
     setTimeout(() => player.lock(), 100);
   }
 
@@ -716,8 +750,12 @@
     if (dims) dims.current = 'overworld';
     initWorld(serverSeed != null ? serverSeed : mp.seed, 'overworld');
     player.world = world;
+    // Shared spawn: same seed ⇒ same forest hub for everyone
     world.updateAround(0, 0);
-    player.spawn();
+    const sp = world.findSpawnPos ? world.findSpawnPos() : { x: 0.5, y: 50, z: 0.5 };
+    // slight offset per player so they don't stack, but same area
+    const off = (mp.id ? parseInt(String(mp.id).slice(0, 2), 16) : 0) % 5;
+    player.spawn(sp.x + (off - 2) * 0.8, sp.y, sp.z + ((off % 3) - 1) * 0.8);
     mp.applyPendingBlocks(world);
     ensureMobs();
     showHud();
@@ -727,6 +765,7 @@
     updateHotbarUI();
     buildInventoryUI();
     renderHearts(player.health, player.maxHealth);
+    say('Общий спавн (лес/равнины). Друзья появляются рядом.', '#8fd9ff');
     setTimeout(() => player.lock(), 100);
   }
 
@@ -889,6 +928,33 @@
       if (running && !pauseEl.classList.contains('hidden')) resumeGame();
     }
     if (!running || player?.dead) return;
+
+    // F3 = survival, F4 = creative (Minecraft-ish mode switch)
+    if (e.code === 'F3') {
+      player.flying = false;
+      player.hardcore = false;
+      setDifficulty(difficulty === 'hardcore' ? 'normal' : difficulty);
+      say('Режим: Выживание (F3)', '#fa8');
+      if (window.SFX) SFX.pop && SFX.pop();
+      e.preventDefault();
+      return;
+    }
+    if (e.code === 'F4') {
+      player.flying = true;
+      player.hardcore = false;
+      say('Режим: Креатив (F4)', '#8f8');
+      if (window.SFX) SFX.pop && SFX.pop();
+      e.preventDefault();
+      return;
+    }
+    // plain F still toggles flight
+    if (e.code === 'KeyF' && player.locked) {
+      player.flying = !player.flying;
+      say(player.flying ? 'Полёт ВКЛ' : 'Полёт ВЫКЛ', '#8fd9ff');
+      if (window.SFX) SFX.pop && SFX.pop();
+      e.preventDefault();
+    }
+
     if (e.code === 'KeyE') { if (inventoryOpen) closeInventory(); else openInventory(); e.preventDefault(); }
     if (e.code === 'KeyC') { openCraft(false); e.preventDefault(); }
     if (e.code === 'KeyT') { openChat(''); e.preventDefault(); }
@@ -932,8 +998,20 @@
   function buildInventoryUI() {
     if (!atlas) return;
     invGrid.innerHTML = '';
-    const list = typeof INVENTORY_ALL !== 'undefined' ? INVENTORY_ALL : PLACEABLE;
+    if (window.InventoryUI) InventoryUI.enhancePanel(invGrid, atlas, player);
+    window._rebuildInv = buildInventoryUI;
+    let list = typeof INVENTORY_ALL !== 'undefined' ? INVENTORY_ALL.slice() : PLACEABLE.slice();
+    // include extra content
+    if (window.EXTRA_BLOCKS) list = list.concat(Object.keys(EXTRA_BLOCKS));
+    if (window.EXTRA_ITEMS) list = list.concat(Object.keys(EXTRA_ITEMS));
+    // unique
+    list = [...new Set(list)];
+    if (window.InventoryUI) list = InventoryUI.filterList(list);
+    // limit DOM for performance but still huge
+    const maxShow = 400;
+    let shown = 0;
     for (const key of list) {
+      if (shown++ > maxShow) break;
       const item = document.createElement('div');
       item.className = 'inv-item';
       const label = ITEMS[key] ? ITEMS[key].name : (BLOCKS[key] ? BLOCKS[key].name : key);
@@ -971,10 +1049,20 @@
     if (fpsTime >= 0.5) { fpsEl.textContent = 'FPS: ' + Math.round(frames / fpsTime); frames = 0; fpsTime = 0; }
 
     if (running && player && world) {
-      // day/night cycle
-      if (!player.flying) timePhase = (timePhase + timeSpeed * dt * 0.15) % 1;
-      // night boost hostiles
+      // day/night cycle ALWAYS — prefer DayCycle controller
+      if (dayCycle) {
+        dayCycle.update(dt);
+        timePhase = dayCycle.phase;
+      } else {
+        timePhase = (timePhase + Math.max(0.004, timeSpeed) * dt * 0.22) % 1;
+      }
+      if (weather) weather.update(dt, timePhase);
+      if (gameStats) gameStats.update(dt);
       applyTimeVisuals();
+      // rain fog boost
+      if (weather && weather.rain > 0 && scene.fog) {
+        scene.fog.density = Math.min(0.04, (scene.fog.density || 0.012) + weather.rain * 0.01);
+      }
 
       if (player.locked && !inventoryOpen && !craftOpen && !chatOpen && !player.dead) {
         player.update(dt);
@@ -1039,8 +1127,9 @@
         const bn = { plains:'равнины', forest:'лес', desert:'пустыня', snow:'снег', mountains:'горы', ocean:'океан', swamp:'болото', taiga:'тайга' };
         biomeName = ' · ' + (bn[b] || b);
       }
-      if (diffEl) diffEl.textContent = 'Сложность: ' + difficulty + (timePhase > 0.55 ? ' · ночь' : ' · день') + biomeName;
-      if (dimLabel) dimLabel.textContent = 'Мир: ' + ((dims && dims.current) || 'overworld') + ' · карта ~' + Math.floor((WORLD_RADIUS || 2400) * 2) + '×' + Math.floor((WORLD_RADIUS || 2400) * 2);
+      const dayLabel = dayCycle ? dayCycle.label() : (timePhase > 0.55 ? 'ночь' : 'день');
+      if (diffEl) diffEl.textContent = 'Сложность: ' + difficulty + ' · ' + dayLabel + biomeName + (weather && weather.rain > 0 ? (weather.thunder ? ' · ⛈' : ' · 🌧') : '');
+      if (dimLabel) dimLabel.textContent = 'Мир: ' + ((dims && dims.current) || 'overworld') + ' · ~' + Math.floor((typeof WORLD_RADIUS !== 'undefined' ? WORLD_RADIUS : 2400) * 2) + '² · блоков:' + (typeof PLACEABLE !== 'undefined' ? PLACEABLE.length : '?');
       heartsEl.style.opacity = player.flying ? '0.35' : '1';
 
       // soul sand slow

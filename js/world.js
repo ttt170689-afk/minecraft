@@ -87,16 +87,65 @@ class World {
   getBiome(wx, wz) {
     const n = this.noise;
     const cont = n.fbm(wx * 0.0035, wz * 0.0035, 4); // continent / ocean
-    if (cont < 0.38) return 'ocean';
+    if (cont < 0.36) return 'ocean';
     const temp = n.fbm(wx * 0.004 + 50, wz * 0.004 + 50, 3);
     const hum = n.fbm(wx * 0.0045 + 200, wz * 0.0045 + 200, 3);
     const mount = n.fbm(wx * 0.008 + 9, wz * 0.008 + 9, 3);
-    if (mount > 0.72 && cont > 0.5) return 'mountains';
-    if (temp < 0.32) return hum > 0.5 ? 'taiga' : 'snow';
-    if (temp > 0.68) return 'desert';
-    if (hum > 0.62 && cont < 0.55) return 'swamp';
-    if (hum > 0.55) return 'forest';
+    if (mount > 0.74 && cont > 0.52) return 'mountains';
+    // Bias spawn region (near 0,0) toward temperate forest/plains — not ice
+    const nearSpawn = Math.hypot(wx, wz) < 180;
+    if (nearSpawn) {
+      if (hum > 0.48) return 'forest';
+      return 'plains';
+    }
+    if (temp < 0.28) return hum > 0.5 ? 'taiga' : 'snow';
+    if (temp > 0.7) return 'desert';
+    if (hum > 0.64 && cont < 0.55) return 'swamp';
+    if (hum > 0.52) return 'forest';
     return 'plains';
+  }
+
+  /**
+   * Find a safe forest/plains surface spawn (not ocean / not pure ice).
+   * Shared for singleplayer + multiplayer.
+   */
+  findSpawnPos() {
+    const candidates = [
+      [0, 0], [8, 8], [-8, 12], [16, -8], [-16, 16], [24, 8], [-12, -20],
+      [32, 16], [40, -24], [-28, 36], [48, 0], [0, 48], [-40, -16],
+      [64, 32], [-48, 56], [72, -40], [20, 60], [-60, 20], [80, 80],
+    ];
+    for (const [ox, oz] of candidates) {
+      for (let r = 0; r < 48; r += 4) {
+        for (let a = 0; a < 8; a++) {
+          const ang = (a / 8) * Math.PI * 2;
+          const wx = Math.floor(ox + Math.cos(ang) * r);
+          const wz = Math.floor(oz + Math.sin(ang) * r);
+          // ensure chunk
+          this.ensureChunk(Math.floor(wx / CHUNK_SIZE), Math.floor(wz / CHUNK_SIZE));
+          const biome = this.getBiome(wx, wz);
+          if (biome === 'ocean' || biome === 'snow') continue;
+          if (biome !== 'forest' && biome !== 'plains' && biome !== 'taiga') continue;
+          let surface = -1;
+          for (let y = WORLD_HEIGHT - 2; y > SEA_LEVEL - 2; y--) {
+            if (this.isSolid(wx, y, wz) && !this.isSolid(wx, y + 1, wz) && !this.isSolid(wx, y + 2, wz)) {
+              const top = ID_TO_KEY[this.getBlock(wx, y, wz)];
+              if (top === 'water' || top === 'lava' || top === 'magma') break;
+              surface = y;
+              break;
+            }
+          }
+          if (surface < SEA_LEVEL) continue;
+          return { x: wx + 0.5, y: surface + 1.05, z: wz + 0.5, biome };
+        }
+      }
+    }
+    // fallback
+    this.ensureChunk(0, 0);
+    for (let y = WORLD_HEIGHT - 1; y > 0; y--) {
+      if (this.isSolid(0, y, 0)) return { x: 0.5, y: y + 1.1, z: 0.5, biome: 'plains' };
+    }
+    return { x: 0.5, y: SEA_LEVEL + 2, z: 0.5, biome: 'plains' };
   }
 
   key(cx, cz) {

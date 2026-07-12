@@ -1,8 +1,8 @@
 {
   "name": "browsercraft",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "BrowserCraft multiplayer server for Render",
+  "description": "BrowserCraft mega content pack — Minecraft-like browser game",
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js",

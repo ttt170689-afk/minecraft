@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BrowserCraft — почти как Minecraft</title>
+  <meta name="theme-color" content="#07111f" />
+  <title>BrowserCraft Deluxe — Minecraft в браузере</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -11,13 +12,13 @@
   <div id="menu" class="overlay">
     <div class="menu-panel">
       <h1>⛏️ BrowserCraft</h1>
-      <p class="subtitle">Верстак · 3D-рука · скины · команды · хардкор · мобы</p>
+      <p class="subtitle">Deluxe HUD · мини-карта · квесты · скины · мобы · мультиплеер</p>
       <button id="btn-play" class="btn primary">▶ Одиночная игра</button>
       <button id="btn-mp-play" class="btn primary mp">🌐 Мультиплеер</button>
       <button id="btn-skin-menu" class="btn">👕 Скины / загрузка</button>
       <button id="btn-howto" class="btn">ℹ Управление</button>
       <button id="btn-host" class="btn">🖥 Сервер / туннель</button>
-      <p class="hint">T чат · C крафт · /nether /end · загрузка скина PNG · музыка в паузе</p>
+      <p class="hint">M мини-карта · P скриншот · F1 помощь · T чат · C крафт · /nether /end</p>
     </div>
   </div>
 
@@ -53,18 +54,20 @@ npm start
       <h2>Управление</h2>
       <ul class="controls-list">
         <li><kbd>WASD</kbd> ходьба</li>
+        <li><kbd>Ctrl</kbd> спринт</li>
         <li><kbd>Мышь</kbd> взгляд</li>
         <li><kbd>ЛКМ</kbd> ломать / бить</li>
         <li><kbd>ПКМ</kbd> ставить / есть / юзать</li>
         <li><kbd>E</kbd> инвентарь</li>
         <li><kbd>C</kbd> верстак 2×2</li>
         <li><kbd>T</kbd> чат / команды</li>
-        <li><kbd>F</kbd> креатив / выживание</li>
-        <li><kbd>/</kbd> команда быстро</li>
+        <li><kbd>F3</kbd> выживание</li>
+        <li><kbd>F4</kbd> креатив</li>
+        <li><kbd>F</kbd> полёт вкл/выкл</li>
         <li><kbd>Esc</kbd> пауза</li>
       </ul>
-      <p class="hint">Команды: /help /gamemode /give /tp /summon /skin /hardcore /time /difficulty</p>
-      <p class="hint">ПКМ по верстаку — крафт 3×3. ПКМ по двери/рычагу/печи.</p>
+      <p class="hint">Мобы враждебные — только ночью; зомби/скелеты днём горят. Спавн в лесу/равнине.</p>
+      <p class="hint">ПКМ: верстак, печь, сундук, дверь, рычаг. /time day|night · /mods</p>
       <button id="btn-howto-back" class="btn">← Назад</button>
     </div>
   </div>
@@ -157,12 +160,12 @@ npm start
       <label class="field-label">🔊 Звуки (SFX)</label>
       <input id="vol-slider" type="range" min="0" max="100" value="45" class="vol-range" />
       <label class="check-row"><input type="checkbox" id="chk-sound" checked /> SFX вкл.</label>
-      <label class="field-label">🎵 Музыка (тише)</label>
-      <input id="music-slider" type="range" min="0" max="100" value="12" class="vol-range" />
-      <label class="check-row"><input type="checkbox" id="chk-music" checked /> Фоновая музыка</label>
-      <label class="field-label">Свой трек (mp3/ogg) — если есть права на файл</label>
+      <label class="field-label">🎵 Музыка — только свой файл (тише)</label>
+      <input id="music-slider" type="range" min="0" max="100" value="18" class="vol-range" />
+      <label class="check-row"><input type="checkbox" id="chk-music" /> Играть загруженный трек</label>
+      <label class="field-label">Загрузить mp3/ogg (свои права)</label>
       <input id="music-file" class="field" type="file" accept="audio/*" />
-      <p class="hint">Оригинал «Step On Up» (The Living Tombstone) в игру встроить нельзя (авторские права). Есть свой электронный BGM или загрузи свой файл.</p>
+      <p class="hint">Встроенной фоновой музыки нет. Загрузи свой трек. F3 = выживание, F4 = креатив.</p>
       <label class="field-label">Сложность</label>
       <select id="diff-select" class="field">
         <option value="peaceful">peaceful</option>
@@ -172,6 +175,9 @@ npm start
         <option value="hardcore">hardcore</option>
       </select>
       <button id="btn-skin-pause" class="btn">👕 Скин</button>
+      <label class="field-label">🧩 Загрузить мод (.js)</label>
+      <input id="mod-file" class="field" type="file" accept=".js,text/javascript" />
+      <p class="hint">Мод: файл с ModAPI.register({ id, onRegister(api){...} })</p>
       <button id="btn-regen" class="btn">🌍 Новый мир</button>
       <button id="btn-menu" class="btn">☰ В меню</button>
     </div>
@@ -193,17 +199,38 @@ npm start
   <script src="js/audio.js"></script>
   <script src="js/music.js"></script>
   <script src="js/textures.js"></script>
+  <script src="js/content_blocks.js"></script>
+  <script src="js/content_items.js"></script>
+  <script src="js/content_recipes.js"></script>
+  <script src="js/content_mobs.js"></script>
   <script src="js/craft.js"></script>
   <script src="js/skins.js"></script>
   <script src="js/mods.js"></script>
+  <script src="js/mod_loader.js"></script>
   <script src="js/commands.js"></script>
   <script src="js/hand.js"></script>
   <script src="js/particles.js"></script>
+  <script src="js/particle_types.js"></script>
   <script src="js/dimensions.js"></script>
+  <script src="js/daycycle.js"></script>
   <script src="js/world.js"></script>
+  <script src="js/structures.js"></script>
+  <script src="js/worldgen_data.js"></script>
+  <script src="js/biome_decorators.js"></script>
   <script src="js/player.js"></script>
   <script src="js/mobs.js"></script>
+  <script src="js/entity_models.js"></script>
+  <script src="js/systems_extra.js"></script>
+  <script src="js/inventory_ui.js"></script>
+  <script src="js/encyclopedia.js"></script>
+  <script src="js/mc_data.js"></script>
+  <script src="js/mc_tags.js"></script>
+  <script src="js/lang_ru.js"></script>
+  <script src="js/sound_events.js"></script>
+  <script src="js/damage_types.js"></script>
+  <script src="js/advancements_data.js"></script>
   <script src="js/multiplayer.js"></script>
   <script src="js/game.js"></script>
+  <script src="js/polish.js"></script>
 </body>
 </html>
